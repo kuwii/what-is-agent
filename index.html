@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>什么是 Agent？</title>
+<script>
+(function(){var t=localStorage.getItem('wia-theme');if(!t)t=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<style>
+:root {
+  --primary: #3b82f6;
+  --primary-light: #1e3a5f;
+  --primary-soft: #1e3a5f;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-light: #64748b;
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --border: #334155;
+  --accent: #f97316;
+  --accent-light: #3d1f0a;
+  --green: #10b981;
+  --green-light: #0d2e1f;
+  --purple: #8b5cf6;
+  --purple-light: #2d1f4e;
+  --radius: 10px;
+  --max-width: 720px;
+}
+
+[data-theme="light"] {
+  --primary: #2563eb;
+  --primary-light: #eff6ff;
+  --primary-soft: #dbeafe;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+  --bg: #ffffff;
+  --surface: #f8fafc;
+  --border: #e2e8f0;
+  --accent: #ea580c;
+  --accent-light: #fff7ed;
+  --green: #059669;
+  --green-light: #ecfdf5;
+  --purple: #7c3aed;
+  --purple-light: #f5f3ff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.85;
+  font-size: 17px;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+header {
+  padding: 80px 0 48px;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 2.4em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+header .subtitle {
+  font-size: 1.1em;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.badge {
+  display: inline-block;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.8em;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+section {
+  padding: 32px 0;
+  border-bottom: 1px solid var(--border);
+  transition: border-color 0.3s;
+}
+
+section:last-of-type { border-bottom: none; }
+
+h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+h2 .num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--primary);
+  color: white;
+  border-radius: 8px;
+  font-size: 0.75em;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+h3 {
+  font-size: 1.15em;
+  font-weight: 700;
+  margin: 24px 0 10px;
+  color: var(--text);
+}
+
+p {
+  margin-bottom: 14px;
+  color: var(--text);
+}
+
+p.muted {
+  color: var(--text-muted);
+  font-size: 0.95em;
+}
+
+strong { color: var(--accent); font-weight: 700; }
+
+em {
+  font-style: normal;
+  background: var(--accent-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin: 20px 0;
+}
+
+.card code {
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+}
+
+.diagram-wrap {
+  margin: 28px 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+}
+
+.diagram-wrap .caption {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-top: 10px;
+}
+
+canvas {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+ul {
+  margin: 10px 0 16px 20px;
+}
+
+ul li {
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+ul.tight li { margin-bottom: 3px; }
+
+.formula-box {
+  background: linear-gradient(135deg, var(--primary-light), var(--purple-light));
+  border: 2px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 28px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.formula-box p {
+  font-size: 1.1em;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+.formula-box .big {
+  font-size: 1.6em;
+  font-weight: 800;
+  color: var(--primary);
+  display: block;
+  margin-top: 8px;
+}
+
+footer {
+  padding: 48px 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+.flow-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.flow-step {
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.arrow-sep {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.callout {
+  background: var(--accent-light);
+  border-left: 3px solid var(--accent);
+  padding: 14px 18px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin: 18px 0;
+}
+
+.callout p { margin: 0; }
+
+.callout.blue {
+  background: var(--primary-light);
+  border-left-color: var(--primary);
+}
+
+.end-mark {
+  text-align: center;
+  font-size: 1.5em;
+  color: var(--text-light);
+  padding: 24px 0;
+  letter-spacing: 0.3em;
+}
+
+.diagram-wrap, .callout, .card, .formula-box {
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.theme-switcher {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+}
+.theme-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
+  line-height: 1;
+  padding: 0;
+}
+.theme-btn:hover {
+  border-color: var(--primary);
+}
+[data-theme="light"] .theme-btn[data-theme="light"],
+[data-theme="dark"] .theme-btn[data-theme="dark"] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  header { padding: 48px 0 32px; }
+  header h1 { font-size: 1.8em; }
+  section { padding: 24px 0; }
+  body { font-size: 16px; }
+  h2 { font-size: 1.3em; }
+}
+</style>
+</head>
+<body>
+<div class="theme-switcher">
+  <button class="theme-btn" data-theme="light" aria-label="亮色模式" title="亮色模式">☀️</button>
+  <button class="theme-btn" data-theme="dark" aria-label="暗色模式" title="暗色模式">🌙</button>
+</div>
+<div class="container">
+
+<header>
+  <h1>什么是 Agent？</h1>
+  <p class="subtitle">一篇给普通人的扫盲贴，读完你也能说"就这？"</p>
+</header>
+
+<!-- ==================== 1. LLM ==================== -->
+<section>
+  <h2><span class="num">1</span> LLM：一台超级"接龙机"</h2>
+
+  <p>大语言模型（LLM）——比如 ChatGPT、Claude、DeepSeek——最基础的本事就一个：<strong>你问，它答</strong>。</p>
+
+  <p>但它的运作方式跟你想象的可能不太一样。LLM 本质上是一台<strong>超级接龙机</strong>——你给它一段话，它预测下一个最可能出现的"词"是什么，接上去；然后把新句子再喂给自己，预测再下一个词……就这么一个字一个字往外蹦，直到它觉得"说完了"。</p>
+
+  <div class="diagram-wrap">
+    <canvas id="canvas-llm" width="680" height="280"></canvas>
+    <p class="caption">每次只预测下一个词，输出后又接回输入——循环往复，就连成了一整段话</p>
+  </div>
+
+  <p>这里说的"词"，在 AI 圈有专门的名字——<strong>token（词元）</strong>。一个 token 可能是完整词语，也可能是单字，甚至可能是词语的一小段（比如"苹果"可能拆成"苹"和"果"）。总之，它是 LLM 输入输出的最小单位。</p>
+
+  <p>那这台接龙机怎么造出来的？简单说：先拍脑袋设计一个极其巨大的数学方程——几百亿到上万亿个参数——然后用海量文字去"训练"它，不断微调参数，让接龙接得越来越准。人类已经没法手算这个过程了，全靠显卡硬堆。</p>
+
+  <div class="callout">
+    <p><strong>它真有智能吗？</strong>——老实说，<strong>不知道</strong>。业界有很多解释（比如"涌现"），但没人能确切说清楚为什么接龙接到一定程度，模型就突然行为像"懂了"。这也解释了 <em>幻觉</em>——LLM 本质是预测下一个字，没有"真假"的概念，所以会一本正经地胡说八道。</p>
+  </div>
+</section>
+
+<!-- ==================== 2. 聊天 ==================== -->
+<section>
+  <h2><span class="num">2</span> 聊天是怎么聊起来的</h2>
+
+  <h3>多轮对话：每次把历史全发一遍</h3>
+  <p>LLM 本身<strong>没有记忆</strong>。每一轮对话在它看来都是独立的新问题。</p>
+  <p>那怎么聊？方法极为简单粗暴：<strong>每次提问，把之前的聊天记录原封不动全部重新发给它</strong>。上一轮它说过的、你说过的，打包在一起塞进去。这样 LLM 就"知道"在聊什么了。</p>
+  <p>代价显而易见——聊得越久，上下文越长，token 烧得越快。于是厂商搞了<strong>提示词缓存（prompt cache）</strong>：如果两次输入的前半截一样（历史记录部分通常不变），后半次可以蹭前半次的计算结果，这部分被复用的前缀就叫<strong>命中缓存</strong>（cache hit），命中的 token 可以享受大幅折扣。</p>
+
+  <h3>人设怎么来的？</h3>
+  <p>如果你直接问 LLM"你是谁"，它会老实回答自己的模型名。但各家聊天产品里的 AI 各有各的人设，靠的是在对话开头偷偷塞一段<strong>系统提示词（System Prompt）</strong>——你正常看不到它，但 LLM 会率先读到。相当于给 AI 的人设说明书。</p>
+
+  <h3>那个"深度思考"是什么鬼？</h3>
+  <p>你以为模型在深沉思考？其实还是接龙。只不过在正式回答之前，它先"自言自语"了一段推理过程——这段用特殊标记包着，不给你看。因为接龙时会参考前面所有内容，所以这段草稿会提升最终回答的质量。说白了：<strong>先打草稿，再交卷，假装草稿不存在</strong>。</p>
+</section>
+
+<!-- ==================== 3. 工具调用 ==================== -->
+<section>
+  <h2><span class="num">3</span> 让 AI 干活：工具调用</h2>
+
+  <p>光聊天不行，AI 还应该能干实事——搜索网页、读写文件、发邮件。但 LLM 本质只会接龙，不能真去操作电脑。怎么办？<strong>找个中间人。</strong></p>
+
+  <div class="diagram-wrap">
+    <canvas id="canvas-tool" width="680" height="320"></canvas>
+    <p class="caption">LLM 说暗号，中介执行，假装是 LLM 自己干的——用户全程无感</p>
+  </div>
+
+  <p>流程分四步：</p>
+  <ul>
+    <li><strong>① 报菜名</strong>：中介通过系统提示词告诉 LLM——"我这有搜索、读文件、发邮件这些工具，要用就说暗号"。</li>
+    <li><strong>② 说暗号</strong>：LLM 接龙时觉得需要搜索，就输出特殊格式的"暗号"（比如一段特定结构的文字），表示"帮我搜 XXX"。</li>
+    <li><strong>③ 真执行</strong>：中介拦截到这个暗号，自己去调真正的搜索接口。</li>
+    <li><strong>④ 塞回去</strong>：中介把搜索结果写成一段话，塞回给 LLM。LLM 看到搜索结果，继续接龙回答你。</li>
+  </ul>
+
+  <p>整个过程中，你就觉得 AI"自己去搜了一下"，浑然不觉背后有个中介在忙活。</p>
+</section>
+
+<!-- ==================== 4. Agent ==================== -->
+<section>
+  <h2><span class="num">4</span> Agent 循环：让工具调用转起来</h2>
+
+  <p>上面的流程做了一次工具调用。但复杂任务可能要用十几次工具、分好几个阶段。</p>
+  <p>那把上面的流程<strong>循环起来</strong>就行了：中介不断把工具执行结果喂给 LLM → LLM 判断"还需要调工具"就继续发暗号 → "活干完了"就输出最终回答。这就是 <strong>Agent 循环（Agent Loop）</strong>。</p>
+
+  <div class="diagram-wrap">
+    <canvas id="canvas-agent" width="680" height="340"></canvas>
+    <p class="caption">核心就这么简单：LLM + 工具 + 循环 = Agent</p>
+  </div>
+
+  <p>给这个循环配上丰富多样的工具，再加一些上下文管理策略，你就得到了<strong>智能体（Agent）</strong>。到了这个阶段，LLM 主要的工作已经从聊天转向了<strong>规划 + 调用工具</strong>。</p>
+</section>
+
+<!-- ==================== 5. 配件 ==================== -->
+<section>
+  <h2><span class="num">5</span> Agent 的关键配件</h2>
+
+  <h3>上下文压缩（Compact）</h3>
+  <p>长任务执行到一半，上下文要爆了怎么办？让 LLM 自己写一份精简总结，把几十轮历史压缩成几段话。风险是 LLM 可能把关键信息也"精炼"没了。</p>
+
+  <h3>自定义工具 &amp; MCP</h3>
+  <p>内置工具不可能面面俱到。你可以写自己的工具程序，然后通过 <strong>MCP（模型上下文协议）</strong> 这个标准接口对接给 Agent。MCP 就是一个"工具对接规范"，避免每家 Agent 各搞一套接口。</p>
+
+  <h3>技能（Skill）</h3>
+  <p>工具管"能操作什么"，技能管"怎么做更好"。技能是一份按需加载的说明书——Agent 先看"菜单"决定需要哪个技能，再加载对应内容的全文，避免一次性塞太多无关指令。</p>
+
+  <h3>记忆（Memory）</h3>
+  <p>每次任务结束，上下文就清空了。Agent 可以把重要的经验教训存下来，下次开工前先翻一翻"备忘录"。</p>
+
+  <h3>子 Agent（Subagent）</h3>
+  <p>复杂任务中有相对独立的子任务时，派一个新 Agent 去干，自己等汇报。本质就是<strong>外包</strong>——主 Agent 管规划，子 Agent 管执行。</p>
+</section>
+
+<!-- ==================== 6. 之上 ==================== -->
+<section>
+  <h2><span class="num">6</span> Agent 之上，还有什么？</h2>
+
+  <h3>RAG：外挂知识库</h3>
+  <p>严格来说，RAG 本身和 Agent 没什么关系——它是一种基于 LLM 的资料检索方法，多用来搭庞大的知识库系统。存资料时，系统把内容切片、算成"向量"（一串反映知识点的数字）存进数据库。提问时，同样算出问题的向量，去库里找最相似的几段，交给 LLM 总结回答。</p>
+  <p>但当 Agent 配上 RAG 就厉害了——干活之前，Agent 可以先调 RAG 系统"翻资料"，带着更多上下文再去执行任务。这就是 <strong>Agentic RAG</strong>。</p>
+
+  <h3>Harness：给马套上缰绳</h3>
+  <p>到这里，整套系统都是以 LLM 为绝对核心搭的——LLM 的接龙输出支配一切。但 LLM 的输出是有随机性的，天马行空、信马由缰。</p>
+  <p>怎么办？在 Agent 外面加一层<strong>非 LLM 的可靠规则</strong>，约束它的行为，确保它按照我们想要的方式工作。这套"缰绳"就叫 <strong>Harness</strong>——用代码逻辑而不是提示词来兜底。</p>
+
+  <h3>OpenClaw：全自动助手</h3>
+  <p>传统的 Agent 依然是人主导的——你打开它，给任务，它执行，然后结束。</p>
+  <p>但如果要当更聪明的个人助手，光被动接活不够。它需要能<strong>主动做事</strong>：</p>
+  <ul>
+    <li><strong>传感器触发</strong>：监控某些事件，事情发生就自动执行对应任务。</li>
+    <li><strong>定时执行</strong>：每到特定时间，自动跑固定流程。</li>
+    <li><strong>自我进化</strong>：不断总结以往经验，记成记忆，越来越了解你。</li>
+  </ul>
+  <p>从"人触发任务"变成"自动触发任务"，再加上记忆环节持续自我迭代——这就是 <strong>OpenClaw</strong> 的思路。</p>
+
+  <h3>工作流：组团干活</h3>
+  <p>有些任务大到单个 Agent 搞不定了。那就给多个 Agent 安排分工，不同 Agent 各司其职，按流程接力完成——这叫 <strong>Agent 编排（Orchestration）</strong>。</p>
+  <p>设立执行流程，让不同 Agent 按照顺序执行、交接成果，这就是 <strong>工作流（Workflow）</strong>。说白了就是：分工 + 制定阶段和流程。到这个阶段，你关心的不是单个 Agent 怎么实现，而是如何组合一群 Agent 形成一套解决问题的机制。</p>
+
+  <h3>Loop 工程：让工作流也"活"起来</h3>
+  <p>既然 Agent 层面可以引入主动执行和自我进化，那工作流层面自然也可以。让整个工作流不再只是被动完成任务，而是能主动触发、自我迭代和优化——这就是 <strong>Loop 工程</strong>。</p>
+</section>
+
+<!-- ==================== 总结 ==================== -->
+<section>
+  <h2><span class="num">∞</span> 总结</h2>
+
+  <p>Agent 不是什么魔法。剥开来看就一句话：</p>
+
+  <div class="formula-box">
+    <p class="big">LLM 接龙 + 中介 + 工具 + 循环 = Agent</p>
+  </div>
+
+  <p>往上再加记忆、技能、子 Agent、RAG、多 Agent 编排……万变不离其宗。</p>
+
+  <p style="text-align:center;margin-top:16px;">祛魅完毕。下次有人跟你吹 Agent 多玄乎，你可以微微一笑：<strong>"不就一台接龙机套了个循环嘛。"</strong></p>
+</section>
+
+<div class="end-mark">· · ·</div>
+
+<footer></footer>
+
+</div>
+
+<script>
+/* ── 读取当前主题色，使图表自动适配亮/暗色 ── */
+function getColors() {
+  var s = getComputedStyle(document.documentElement);
+  function v(n) { return (s.getPropertyValue(n) || '').trim(); }
+  return {
+    primary: v('--primary'), primaryLight: v('--primary-light'),
+    accent: v('--accent'),   accentLight: v('--accent-light'),
+    green: v('--green'),     greenLight: v('--green-light'),
+    purple: v('--purple'),   purpleLight: v('--purple-light'),
+    text: v('--text'), muted: v('--text-muted'), light: v('--text-light'),
+    surface: v('--surface'), border: v('--border'),
+    amberFill: '#fef3c7', amberBorder: '#f59e0b', amberText: '#92400e'
+  };
+}
+
+var __redraws = [];
+
+/* ── 画布初始化：等比缩放，窄屏不变形 ── */
+function setupCanvas(id, drawFn) {
+  var canvas = document.getElementById(id);
+  if (!canvas) return;
+  var dpr = window.devicePixelRatio || 1;
+  var baseW = canvas.width, baseH = canvas.height; // 设计空间尺寸
+
+  function resize() {
+    var rect = canvas.parentElement.getBoundingClientRect();
+    var w = Math.min(rect.width - 32, baseW);
+    var h = baseH * (w / baseW);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+    var s = w / baseW; // 等比缩放因子
+    ctx.save();
+    ctx.scale(s, s);
+    drawFn(ctx, baseW, baseH);
+    ctx.restore();
+  }
+
+  __redraws.push(resize);
+  resize();
+  window.addEventListener('resize', resize);
+}
+
+/* ── 基础绘图工具 ── */
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color, width) {
+  color = color || '#64748b';
+  width = width || 2;
+  var angle = Math.atan2(y2 - y1, x2 - x1);
+  var headLen = 11;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2 - headLen * 0.85 * Math.cos(angle), y2 - headLen * 0.85 * Math.sin(angle));
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - headLen * Math.sin(angle - 0.4));
+  ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - headLen * Math.sin(angle + 0.4));
+  ctx.closePath();
+  ctx.fill();
+}
+
+/* 支持多行文本的方框 */
+function drawBox(ctx, x, y, w, h, text, fill, border, textColor, fontSize) {
+  fontSize = fontSize || 14;
+  roundRect(ctx, x, y, w, h, 9);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = border;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = textColor;
+  ctx.font = '600 ' + fontSize + 'px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  var lines = String(text).split('\n');
+  var lh = fontSize * 1.25;
+  var startY = y + h / 2 - (lines.length - 1) * lh / 2;
+  for (var i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], x + w / 2, startY + i * lh);
+  }
+}
+
+/* 支持多行 + 对齐的标签 */
+function drawLabel(ctx, x, y, text, color, size, align) {
+  color = color || '#64748b';
+  size = size || 13;
+  align = align || 'center';
+  ctx.fillStyle = color;
+  ctx.font = '500 ' + size + 'px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  var lines = String(text).split('\n');
+  var lh = size * 1.3;
+  var startY = y - (lines.length - 1) * lh / 2;
+  for (var i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], x, startY + i * lh);
+  }
+}
+
+/* ─── 图 1: LLM 接龙原理 ─── */
+function drawLLM(ctx, w, h) {
+  var c = getColors();
+  var cx = w / 2;
+
+  var boxW = 58, boxH = 40, gap = 12;
+  var inTokens = ['你', '好', '吗'];
+  var totalIn = inTokens.length * boxW + (inTokens.length - 1) * gap;
+  var yInput = 42;
+  var startX = cx - totalIn / 2;
+  for (var i = 0; i < inTokens.length; i++) {
+    drawBox(ctx, startX + i * (boxW + gap), yInput, boxW, boxH, inTokens[i],
+      c.primaryLight, c.primary, c.primary, 16);
+  }
+
+  var llmW = 128, llmH = 42, llmY = yInput + boxH + 34;
+  drawArrow(ctx, cx, yInput + boxH + 2, cx, llmY - 2, c.muted, 2);
+  drawBox(ctx, cx - llmW / 2, llmY, llmW, llmH, 'LLM 接龙',
+    c.amberFill, c.amberBorder, c.amberText, 15);
+
+  var outW = 312, outH = 56, outY = llmY + llmH + 30;
+  drawArrow(ctx, cx, llmY + llmH + 2, cx, outY - 2, c.muted, 2);
+
+  ctx.save();
+  ctx.setLineDash([5, 4]);
+  ctx.strokeStyle = c.light;
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, cx - outW / 2, outY, outW, outH, 10);
+  ctx.stroke();
+  ctx.restore();
+  drawLabel(ctx, cx, outY - 12, '逐个生成 token…', c.muted, 12);
+
+  var genTokens = ['我', '很', '好'];
+  var gW = 58, gH = 36, gGap = 12;
+  var gStartX = cx - outW / 2 + 18;
+  var gY = outY + (outH - gH) / 2;
+  for (i = 0; i < genTokens.length; i++) {
+    ctx.save();
+    ctx.globalAlpha = 0.4 + i * 0.3;
+    drawBox(ctx, gStartX + i * (gW + gGap), gY, gW, gH, genTokens[i],
+      c.greenLight, c.green, c.green, 15);
+    ctx.restore();
+  }
+  var dotsX = gStartX + genTokens.length * (gW + gGap) + 6;
+  drawLabel(ctx, dotsX, outY + outH / 2, '···', c.muted, 18);
+
+  // 循环：输出 → 输入
+  var loopX = cx + outW / 2 + 26;
+  var inRight = startX + totalIn;
+  var inMidY = yInput + boxH / 2;
+  ctx.save();
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = c.primary;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx + outW / 2, outY + outH / 2);
+  ctx.lineTo(loopX, outY + outH / 2);
+  ctx.lineTo(loopX, inMidY);
+  ctx.lineTo(inRight + 12, inMidY);
+  ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = c.primary;
+  ctx.beginPath();
+  ctx.moveTo(inRight, inMidY);
+  ctx.lineTo(inRight + 11, inMidY - 5);
+  ctx.lineTo(inRight + 11, inMidY + 5);
+  ctx.closePath();
+  ctx.fill();
+  drawLabel(ctx, loopX + 12, (outY + outH / 2 + inMidY) / 2, '循环：输出 → 输入', c.primary, 12, 'left');
+}
+
+/* ─── 图 2: 工具调用（中介为枢纽） ─── */
+function drawTool(ctx, w, h) {
+  var c = getColors();
+  var midX = w / 2;
+  var rowY = 80, toolY = 235;
+
+  var youW = 78, youH = 42, youX = 42;
+  drawBox(ctx, youX, rowY - youH / 2, youW, youH, '🧑 你', c.surface, c.border, c.text, 15);
+
+  var llmW = 78, llmH = 42, llmX = w - 42 - llmW;
+  drawBox(ctx, llmX, rowY - llmH / 2, llmW, llmH, 'LLM', c.amberFill, c.amberBorder, c.amberText, 15);
+
+  var midW = 124, midH = 46, midX0 = midX - midW / 2;
+  drawBox(ctx, midX0, rowY - midH / 2, midW, midH, '中介程序', c.purpleLight, c.purple, c.purple, 15);
+
+  var toolW = 92, toolH = 44, toolX = midX - toolW / 2;
+  drawBox(ctx, toolX, toolY - toolH / 2, toolW, toolH, '🔧 工具', c.greenLight, c.green, c.green, 15);
+
+  var youR = youX + youW, midL = midX0, midR = midX0 + midW, llmL = llmX;
+  var yGo = rowY - 7, yBack = rowY + 7;
+
+  drawArrow(ctx, youR, yGo, midL, yGo, c.muted, 1.8);
+  drawLabel(ctx, (youR + midL) / 2, yGo - 10, '发消息', c.muted, 12);
+  drawArrow(ctx, midL, yBack, youR, yBack, c.primary, 2);
+  drawLabel(ctx, (youR + midL) / 2, yBack + 11, '最终回答', c.primary, 12);
+
+  drawArrow(ctx, midR, yGo, llmL, yGo, c.muted, 1.8);
+  drawLabel(ctx, (midR + llmL) / 2, yGo - 10, '注入暗号表', c.muted, 12);
+  drawArrow(ctx, llmL, yBack, midR, yBack, c.accent, 2);
+  drawLabel(ctx, (midR + llmL) / 2, yBack + 11, '回复暗号', c.accent, 12);
+
+  var xGo = midX - 9, xBack = midX + 9;
+  var midB = rowY + midH / 2, toolT = toolY - toolH / 2;
+  drawArrow(ctx, xGo, midB, xGo, toolT, c.muted, 1.8);
+  drawLabel(ctx, xGo - 12, (midB + toolT) / 2 - 8, '执行', c.muted, 12, 'right');
+  drawArrow(ctx, xBack, toolT, xBack, midB, c.muted, 1.8);
+  drawLabel(ctx, xBack + 12, (midB + toolT) / 2 + 8, '返回结果', c.muted, 12, 'left');
+}
+
+/* ─── 图 3: Agent 循环（垂直主干 + 左侧工具回路） ─── */
+function drawAgent(ctx, w, h) {
+  var c = getColors();
+  var cx = w / 2;
+
+  var uW = 128, uH = 42, uY = 30;
+  drawBox(ctx, cx - uW / 2, uY, uW, uH, '🧑 用户输入', c.surface, c.border, c.text, 15);
+
+  var lW = 112, lH = 42, lY = 102;
+  drawBox(ctx, cx - lW / 2, lY, lW, lH, 'LLM', c.amberFill, c.amberBorder, c.amberText, 15);
+
+  var dW = 156, dH = 42, dY = 172;
+  drawBox(ctx, cx - dW / 2, dY, dW, dH, '还要调工具？', c.surface, c.border, c.muted, 14);
+
+  var fW = 128, fH = 42, fY = 262;
+  drawBox(ctx, cx - fW / 2, fY, fW, fH, '最终回答', c.primaryLight, c.primary, c.primary, 15);
+
+  var tW = 96, tH = 66, tX = 72, tYc = dY + dH / 2;
+  drawBox(ctx, tX, tYc - tH / 2, tW, tH, '🔧\n工具', c.greenLight, c.green, c.green, 15);
+
+  drawArrow(ctx, cx, uY + uH, cx, lY, c.muted, 2);
+  drawArrow(ctx, cx, lY + lH, cx, dY, c.muted, 2);
+
+  drawArrow(ctx, cx, dY + dH, cx, fY, c.primary, 2);
+  drawLabel(ctx, cx + 16, (dY + dH + fY) / 2, '否', c.primary, 13, 'left');
+
+  var tR = tX + tW, dL = cx - dW / 2;
+  drawArrow(ctx, dL, tYc, tR, tYc, c.accent, 2);
+  drawLabel(ctx, (dL + tR) / 2, tYc - 12, '是', c.accent, 13);
+
+  var tTop = tYc - tH / 2, lMidY = lY + lH / 2, lL = cx - lW / 2;
+  ctx.save();
+  ctx.strokeStyle = c.green;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(tX + tW / 2, tTop);
+  ctx.lineTo(tX + tW / 2, lMidY);
+  ctx.lineTo(lL - 12, lMidY);
+  ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = c.green;
+  ctx.beginPath();
+  ctx.moveTo(lL, lMidY);
+  ctx.lineTo(lL - 11, lMidY - 5);
+  ctx.lineTo(lL - 11, lMidY + 5);
+  ctx.closePath();
+  ctx.fill();
+  drawLabel(ctx, (tX + tW / 2 + lL) / 2, lMidY - 12, '结果', c.green, 12);
+
+  drawLabel(ctx, cx, h - 16, '循环往复，直到 LLM 认为活干完了', c.muted, 12);
+}
+
+/* ── 初始化 ── */
+document.addEventListener('DOMContentLoaded', function () {
+  setupCanvas('canvas-llm', drawLLM);
+  setupCanvas('canvas-tool', drawTool);
+  setupCanvas('canvas-agent', drawAgent);
+
+  var html = document.documentElement;
+
+  document.querySelectorAll('.theme-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var theme = this.getAttribute('data-theme');
+      html.setAttribute('data-theme', theme);
+      localStorage.setItem('wia-theme', theme);
+      __redraws.forEach(function (fn) { fn(); }); // 切换主题时重绘图表
+    });
+  });
+});
+</script>
+
+</body>
+</html>
