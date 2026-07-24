@@ -1,4 +1,4 @@
-# QWEN.md — what-is-agent 项目上下文
+# what-is-agent 项目上下文
 
 ## 项目目的
 
