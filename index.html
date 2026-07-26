@@ -154,6 +154,13 @@ em {
   color: var(--accent);
 }
 
+.container a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.container a:hover { text-decoration: underline; }
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -378,6 +385,8 @@ footer {
   <p>这里说的"词"，在 AI 圈有专门的名字——<strong>token（词元）</strong>。一个 token 可能是完整词语，也可能是单字，甚至可能是词语的一小段（比如"苹果"可能拆成"苹"和"果"）。总之，它是 LLM 输入输出的最小单位。</p>
 
   <p>那这台接龙机怎么造出来的？简单说：先拍脑袋设计一个极其巨大的数学方程——几百亿到上万亿个参数——然后用海量文字去"训练"它，不断微调参数，让接龙接得越来越准。人类已经没法手算这个过程了，全靠显卡硬堆。</p>
+
+  <p class="muted">👉 好奇为什么非得用显卡来算？参见番外篇：<a href="why-llm-needs-gpu.html">《LLM 为什么用显卡》</a></p>
 
   <div class="callout">
     <p><strong>它真有智能吗？</strong>——老实说，<strong>不知道</strong>。业界有很多解释（比如"涌现"），但没人能确切说清楚为什么接龙接到一定程度，模型就突然行为像"懂了"。这也解释了 <em>幻觉</em>——LLM 本质是预测下一个字，没有"真假"的概念，所以会一本正经地胡说八道。</p>
