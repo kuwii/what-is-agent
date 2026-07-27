@@ -528,9 +528,31 @@ footer {
   </div>
 </section>
 
-<!-- ==================== 6. 多模态 ==================== -->
+<!-- ==================== 6. 稠密 vs MoE ==================== -->
 <section>
-  <h2><span class="num">6</span> 多模态：给 LLM 配上眼睛和耳朵</h2>
+  <h2><span class="num">6</span> 稠密 vs MoE：全员上岗 vs 专科门诊</h2>
+
+  <p>前面说过"大力出奇迹"，于是参数越堆越多——从几亿到几百亿、几千亿。这么多参数怎么组织？最直白的答案是：<strong>全部捏在一起，每回答一个问题，所有参数齐刷刷上阵</strong>。这种结构叫<em>稠密模型</em>（Dense）。就像一家公司，每来一单，从 CEO 到实习生全员打卡——扎实，但人力成本拉满。</p>
+
+  <p>成本是实打实的：参数越多，训练要越多显卡，回答问题越慢，电费也越吓人。既想要大模型的脑子，又付不起大模型的账单，怎么办？有人出了个主意：<em>MoE</em>（Mixture of Experts，混合专家）。</p>
+
+  <p>MoE 把模型拆成许多个叫"专家"的小网络，再配一个<em>路由器</em>（传达室大爷）站在前面。问题来了，路由器看一眼，把它分给最擅长这类问题的两三个专家，其余专家继续休息。就像去大医院看病：你不需要挂全医院所有医生的号，分诊台把你分给对口的两三个专科大夫。</p>
+
+  <div class="diagram-wrap">
+    <canvas id="canvas-moe" width="680" height="300"></canvas>
+    <p class="caption">左：稠密模型，所有参数每次都干活；右：MoE，路由器分诊，被点名的专家才上岗</p>
+  </div>
+
+  <p>所以 MoE 模型要用两个数字描述：<strong>总参数量</strong>（医院有多少医生）和<strong>激活参数量</strong>（这次真正给你看病的有几个）。听到"总参数几千亿、激活几百亿"别被吓到——意思是模型确实很大，但每个问题只动用其中一小部分。<strong>大模型的脑子，小模型的账单</strong>，这就是全部把戏。</p>
+
+  <div class="callout blue">
+    <p><strong>MoE 省显存吗？</strong>不省。休息的专家也得"坐在诊室里"——所有参数依然要装进显存。MoE 省的是算力，不是存储：用更大的显存占用和更复杂的训练，换来更便宜、更快的回答。</p>
+  </div>
+</section>
+
+<!-- ==================== 7. 多模态 ==================== -->
+<section>
+  <h2><span class="num">7</span> 多模态：给 LLM 配上眼睛和耳朵</h2>
 
   <p>LLM 只认 token——一串数字。那它怎么看图、听声音？答案很直白：<strong>请翻译官</strong>。</p>
 
@@ -917,7 +939,92 @@ function drawTrain(ctx, w, h) {
   drawArrow(ctx, 428, bY + bH / 2, 476, bY + bH / 2, c.muted, 2);
 }
 
-/* ─── 图 6: 多模态 = LLM + 翻译官 ─── */
+/* ─── 图 6: 稠密模型 vs MoE ─── */
+function drawMoE(ctx, w, h) {
+  var c = getColors();
+  var i, j;
+
+  /* 中间分隔虚线 */
+  ctx.save();
+  ctx.setLineDash([6, 5]);
+  ctx.strokeStyle = c.border;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(340, 36);
+  ctx.lineTo(340, 266);
+  ctx.stroke();
+  ctx.restore();
+
+  /* ── 左：稠密模型，所有参数全亮 ── */
+  drawLabel(ctx, 170, 20, '稠密模型 · 全员上岗', c.primary, 15);
+  drawBox(ctx, 110, 42, 120, 36, '你的问题', c.surface, c.border, c.text, 13);
+  drawArrow(ctx, 170, 80, 170, 106, c.muted, 1.8);
+
+  roundRect(ctx, 60, 108, 220, 100, 10);
+  ctx.fillStyle = c.primaryLight;
+  ctx.fill();
+  ctx.strokeStyle = c.primary;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  for (i = 0; i < 4; i++) {
+    for (j = 0; j < 10; j++) {
+      ctx.beginPath();
+      ctx.arc(82 + j * 19.5, 126 + i * 13, 3.2, 0, Math.PI * 2);
+      ctx.fillStyle = c.primary;
+      ctx.fill();
+    }
+  }
+  drawLabel(ctx, 170, 190, '全部参数 · 一起上阵', c.primary, 12);
+
+  drawArrow(ctx, 170, 210, 170, 236, c.muted, 1.8);
+  drawBox(ctx, 110, 238, 120, 36, '回答', c.greenLight, c.green, c.green, 13);
+  drawLabel(ctx, 170, 288, '每个问题，全员打卡', c.muted, 12);
+
+  /* ── 右：MoE，路由器分诊 ── */
+  drawLabel(ctx, 510, 20, 'MoE 模型 · 专科门诊', c.purple, 15);
+  drawBox(ctx, 450, 42, 120, 36, '你的问题', c.surface, c.border, c.text, 13);
+  drawArrow(ctx, 510, 80, 510, 102, c.muted, 1.8);
+  drawBox(ctx, 442, 104, 136, 34, '路由器 · 分诊台', c.purpleLight, c.purple, c.purple, 13);
+
+  var xs = [395, 447, 499, 551, 603, 655]; /* 六个专家的中心 x */
+  var on = { 1: true, 4: true };           /* 被点名的专家 */
+
+  for (i = 0; i < xs.length; i++) {
+    var active = !!on[i];
+    if (active) {
+      drawArrow(ctx, 510, 140, xs[i], 166, c.green, 1.8);
+    } else {
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = c.light;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(510, 140);
+      ctx.lineTo(xs[i], 166);
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.save();
+    if (!active) ctx.setLineDash([5, 4]);
+    roundRect(ctx, xs[i] - 22, 168, 44, 44, 8);
+    ctx.fillStyle = active ? c.greenLight : c.surface;
+    ctx.fill();
+    ctx.strokeStyle = active ? c.green : c.border;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+    drawLabel(ctx, xs[i], 183, '专家', active ? c.green : c.light, 11);
+    drawLabel(ctx, xs[i], 199, active ? '上岗' : '休息', active ? c.green : c.light, 10);
+  }
+
+  drawArrow(ctx, 447, 214, 496, 236, c.green, 1.8);
+  drawArrow(ctx, 603, 214, 524, 236, c.green, 1.8);
+  drawBox(ctx, 450, 238, 120, 36, '回答', c.greenLight, c.green, c.green, 13);
+  drawLabel(ctx, 510, 288, '被点名的专家干活，其余休息', c.muted, 12);
+}
+
+/* ─── 图 7: 多模态 = LLM + 翻译官 ─── */
 function drawMM(ctx, w, h) {
   var c = getColors();
 
@@ -957,6 +1064,7 @@ document.addEventListener('DOMContentLoaded', function () {
   setupCanvas('canvas-nn', drawNN);
   setupCanvas('canvas-nlp', drawNLP);
   setupCanvas('canvas-train', drawTrain);
+  setupCanvas('canvas-moe', drawMoE);
   setupCanvas('canvas-mm', drawMM);
 
   var html = document.documentElement;
