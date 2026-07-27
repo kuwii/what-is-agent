@@ -111,6 +111,13 @@ section {
 
 section:last-of-type { border-bottom: none; }
 
+.closing {
+  text-align: center;
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+}
+
 h2 {
   font-size: 1.5em;
   font-weight: 700;
@@ -381,6 +388,7 @@ footer {
   header { padding: 48px 0 32px; }
   header h1 { font-size: 1.8em; }
   section { padding: 24px 0; }
+  .closing { margin-top: 24px; padding-top: 24px; }
   body { font-size: 16px; }
   h2 { font-size: 1.3em; }
 }
@@ -472,7 +480,7 @@ footer {
     <p><strong>那 LLM 是在"显示"什么吗？</strong>当然不是。GPU 只是恰好擅长这类计算，而这类计算最早是用来做显示的。就像卡车最早设计来拉煤，后来也拉家具——货换了，车还是那辆车。</p>
   </div>
 
-  <p style="text-align:center;margin-top:16px;">下次再有人问"AI 为什么用显卡"，你可以一句话总结：<strong>不是为了显示，是因为 AI 的账又多又简单又能并行——而显卡生来就是干这个的。</strong></p>
+  <p class="closing">下次再有人问"AI 为什么用显卡"，你可以一句话总结：<strong>不是为了显示，是因为 AI 的账又多又简单又能并行——而显卡生来就是干这个的。</strong></p>
 </section>
 
 <div class="end-mark">· · ·</div>
