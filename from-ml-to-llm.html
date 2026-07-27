@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>机器学习，神经网络与大语言模型（LLM）（番外篇）</title>
+<script>
+(function(){var t=localStorage.getItem('wia-theme');if(!t)t=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<style>
+:root {
+  --primary: #3b82f6;
+  --primary-light: #1e3a5f;
+  --primary-soft: #1e3a5f;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-light: #64748b;
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --border: #334155;
+  --accent: #f97316;
+  --accent-light: #3d1f0a;
+  --green: #10b981;
+  --green-light: #0d2e1f;
+  --purple: #8b5cf6;
+  --purple-light: #2d1f4e;
+  --radius: 10px;
+  --max-width: 720px;
+}
+
+[data-theme="light"] {
+  --primary: #2563eb;
+  --primary-light: #eff6ff;
+  --primary-soft: #dbeafe;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+  --bg: #ffffff;
+  --surface: #f8fafc;
+  --border: #e2e8f0;
+  --accent: #ea580c;
+  --accent-light: #fff7ed;
+  --green: #059669;
+  --green-light: #ecfdf5;
+  --purple: #7c3aed;
+  --purple-light: #f5f3ff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.85;
+  font-size: 17px;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+header {
+  padding: 80px 0 48px;
+  text-align: center;
+}
+
+header h1 {
+  font-size: 2.4em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+header .subtitle {
+  font-size: 1.1em;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.badge {
+  display: inline-block;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.8em;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+header .title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+header .title-row .badge { margin-bottom: 0; }
+
+section {
+  padding: 32px 0;
+  border-bottom: 1px solid var(--border);
+  transition: border-color 0.3s;
+}
+
+section:last-of-type { border-bottom: none; }
+
+h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+h2 .num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--primary);
+  color: white;
+  border-radius: 8px;
+  font-size: 0.75em;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+h3 {
+  font-size: 1.15em;
+  font-weight: 700;
+  margin: 24px 0 10px;
+  color: var(--text);
+}
+
+p {
+  margin-bottom: 14px;
+  color: var(--text);
+}
+
+p.muted {
+  color: var(--text-muted);
+  font-size: 0.95em;
+}
+
+strong { color: var(--accent); font-weight: 700; }
+
+em {
+  font-style: normal;
+  background: var(--accent-light);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.container a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.container a:hover { text-decoration: underline; }
+
+.container a.back-link {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 7px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.85em;
+  padding: 6px 16px;
+  border-radius: 20px;
+  margin: 0 auto 22px;
+  transition: color 0.25s, border-color 0.25s, background-color 0.25s;
+}
+.container a.back-link:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  text-decoration: none;
+}
+.back-link .arrow {
+  display: inline-block;
+  transition: transform 0.25s;
+}
+.back-link:hover .arrow { transform: translateX(-3px); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin: 20px 0;
+}
+
+.card code {
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+}
+
+.diagram-wrap {
+  margin: 28px 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+}
+
+.diagram-wrap .caption {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-top: 10px;
+}
+
+canvas {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+ul {
+  margin: 10px 0 16px 20px;
+}
+
+ul li {
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+ul.tight li { margin-bottom: 3px; }
+
+.formula-box {
+  background: linear-gradient(135deg, var(--primary-light), var(--purple-light));
+  border: 2px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 28px;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.formula-box p {
+  font-size: 1.1em;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+.formula-box .big {
+  font-size: 1.6em;
+  font-weight: 800;
+  color: var(--primary);
+  display: block;
+  margin-top: 8px;
+}
+
+footer {
+  padding: 48px 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+.flow-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 16px 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.flow-step {
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.arrow-sep {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.callout {
+  background: var(--accent-light);
+  border-left: 3px solid var(--accent);
+  padding: 14px 18px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin: 18px 0;
+}
+
+.callout p { margin: 0; }
+
+.callout.blue {
+  background: var(--primary-light);
+  border-left-color: var(--primary);
+}
+
+.end-mark {
+  text-align: center;
+  font-size: 1.5em;
+  color: var(--text-light);
+  padding: 24px 0;
+  letter-spacing: 0.3em;
+}
+
+.diagram-wrap, .callout, .card, .formula-box {
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.theme-switcher {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  display: flex;
+  gap: 8px;
+  z-index: 100;
+}
+.theme-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
+  line-height: 1;
+  padding: 0;
+}
+.theme-btn:hover {
+  border-color: var(--primary);
+}
+[data-theme="light"] .theme-btn[data-theme="light"],
+[data-theme="dark"] .theme-btn[data-theme="dark"] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* ── GitHub Corner 主题切换 ── */
+.github-corner-light { display: none; }
+.github-corner-dark  { display: none; }
+[data-theme="light"] .github-corner-light { display: block; }
+[data-theme="dark"]  .github-corner-dark  { display: block; }
+
+.github-corner:hover .octo-arm { animation: octocat-wave 560ms ease-in-out; }
+@keyframes octocat-wave {
+  0%, 100% { transform: rotate(0); }
+  20%, 60% { transform: rotate(-25deg); }
+  40%, 80% { transform: rotate(10deg); }
+}
+@media (max-width: 500px) {
+  .github-corner:hover .octo-arm { animation: none; }
+  .github-corner .octo-arm { animation: octocat-wave 560ms ease-in-out; }
+}
+
+@media (max-width: 600px) {
+  header { padding: 48px 0 32px; }
+  header h1 { font-size: 1.8em; }
+  section { padding: 24px 0; }
+  body { font-size: 16px; }
+  h2 { font-size: 1.3em; }
+}
+</style>
+</head>
+<body>
+
+<!-- GitHub Corner - 亮色模式 -->
+<a href="https://github.com/kuwii/what-is-agent" class="github-corner github-corner-light" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; left: 0; transform: scale(-1, 1);" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></a>
+
+<!-- GitHub Corner - 暗色模式 -->
+<a href="https://github.com/kuwii/what-is-agent" class="github-corner github-corner-dark" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#fff; color:#151513; position: absolute; top: 0; border: 0; left: 0; transform: scale(-1, 1);" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></a>
+
+<div class="theme-switcher">
+  <button class="theme-btn" data-theme="light" aria-label="亮色模式" title="亮色模式">☀️</button>
+  <button class="theme-btn" data-theme="dark" aria-label="暗色模式" title="暗色模式">🌙</button>
+</div>
+<div class="container">
+
+<header>
+  <a class="back-link" href="index.html"><span class="arrow">←</span> 回到主页</a>
+  <div class="badge">番外篇</div>
+  <h1>机器学习，神经网络与大语言模型（LLM）</h1>
+  <p class="subtitle">读完正文你可能好奇：这台"接龙机"到底是怎么"学"出来的？这篇从最底层的概念讲起。</p>
+</header>
+
+<!-- ==================== 1. 机器学习 ==================== -->
+<section>
+  <h2><span class="num">1</span> 机器学习：不写规则，给例子</h2>
+
+  <p>AI 这个词听着玄，但它最底层的想法朴素得惊人：<strong>不告诉机器规则，给它看例子，让它自己总结规律</strong>。这个思路，就叫<em>机器学习</em>（Machine Learning）。</p>
+
+  <p>拿垃圾邮件过滤举例。传统思路是人写规则："含'中奖'→ 垃圾邮件"。但骗子会进化，规则永远追不上骗术。机器学习的思路反过来：找来 10 万封已经标记好"垃圾/正常"的邮件，让机器自己去琢磨——它可能发现"中奖 + 链接 + 三个感叹号"的组合很可疑。规则不是人写的，是从例子里"悟"出来的。</p>
+
+  <p>怎么做到的？机器内部有一大堆可以拧的"旋钮"（学名<em>参数</em>）。训练就是不停地试：猜错了，就把旋钮往回调一点点，直到猜得足够准。就像学生刷题——不是背答案，而是做完一万道题之后，总结出了解题套路。</p>
+
+  <div class="diagram-wrap">
+    <canvas id="canvas-ml" width="680" height="220"></canvas>
+    <p class="caption">先用带答案的例子训练，训练完就能对新情况做判断</p>
+  </div>
+
+  <div class="callout">
+    <p><strong>"AI 会学习"翻译成人话：</strong>一台有百万个旋钮的机器，靠海量例子把旋钮转到合适的位置。旋钮越多、例子越多，悟出来的规律就越细——仅此而已。</p>
+  </div>
+</section>
+
+<!-- ==================== 2. 预测和分类 ==================== -->
+<section>
+  <h2><span class="num">2</span> 任务说穿了就俩：预测和分类</h2>
+
+  <p>机器学习的任务千变万化——推荐商品、识别人脸、翻译文章……但扒掉外衣，基本就两类：</p>
+
+  <ul>
+    <li><strong>预测：猜一个数。</strong>明天多少度？这套房子值多少钱？</li>
+    <li><strong>分类：分一个类。</strong>这封邮件是垃圾吗？这张照片是猫是狗？</li>
+  </ul>
+
+  <div class="diagram-wrap">
+    <canvas id="canvas-task" width="680" height="250"></canvas>
+    <p class="caption">左：根据已有数据猜一个数值；右：把东西分成几堆</p>
+  </div>
+
+  <p>两者的界限其实很模糊——分类本质上是在预测"属于每个类别的可能性"，比如"这张图 92% 是猫"。</p>
+
+  <p>还记得正文说 LLM 是台接龙机吗？"猜下一个词"其实就是一道超大型分类题：词表里几万个候选 token，算出哪个最可能接上。<strong>所以 LLM 再风光，干的也是机器学习最古老的活儿。</strong></p>
+</section>
+
+<!-- ==================== 3. 神经网络 ==================== -->
+<section>
+  <h2><span class="num">3</span> 神经网络：一台层层加工的机器</h2>
+
+  <p>早期机器学习有个软肋：人得先告诉机器"看哪里"。比如识别猫，人得先定义好"尖耳朵、胡须、圆脸"这些特征，机器只管最后一步判断。简单任务还行，复杂任务人就定义不过来了——你试试给"猫"写一份完整定义？</p>
+
+  <p>转折的思路很直接：干脆让机器连"看哪里"也自己学。于是有了<em>神经网络</em>——一台受大脑启发的"加工流水线"：数据从一层层"神经元"中间穿过，每一层做一点点简单加工，层层提炼，自己从原始像素里总结出"边缘 → 形状 → 物体"。层数足够多的神经网络，就叫<em>深度学习</em>。</p>
+
+  <p>打个比方：就像工厂流水线——原料进去，每个工位拧一颗螺丝，出来就是成品。单个工位简单到可笑，但几百个工位串起来，就能干人定义不了的活。</p>
+
+  <div class="diagram-wrap">
+    <canvas id="canvas-nn" width="680" height="296"></canvas>
+    <p class="caption">数据从左进、从右出，每经过一层就被加工一次——每一层都在提炼更抽象的特征</p>
+  </div>
+
+  <h3>为什么这几年才火？</h3>
+
+  <p>神经网络的想法上世纪就有了，但一直不温不火。直到 2012 年前后，三样东西第一次凑齐了：</p>
+
+  <ul>
+    <li><strong>数据</strong>：互联网攒了几十年的文字、图片、视频，全成了教材；</li>
+    <li><strong>算力</strong>：GPU 被拉来干 AI，几千块显卡一起上阵（👉 番外篇<a href="why-llm-needs-gpu.html">《LLM 为什么用显卡》</a>讲的就是这段）；</li>
+    <li><strong>算法</strong>：研究者改进了训练技巧，让几百层的网络真的能训起来。</li>
+  </ul>
+
+  <p>粮食、力气、方法同时到位，深度学习这才起飞。<strong>不是突然变聪明，是条件终于凑齐了。</strong></p>
+</section>
+
+<!-- ==================== 4. NLP 到 LLM ==================== -->
+<section>
+  <h2><span class="num">4</span> 语言也能"算"？从 NLP 到 LLM</h2>
+
+  <p>文字看起来和数字八竿子打不着，怎么让机器"算"语言？关键一步：<strong>把词变成数字</strong>（<em>词向量</em>）。意思相近的词，变出来的数字也相近——"猫"和"狗"挨得近，和"发票"离得远。文字一旦变成数字，神经网络就能算了。处理语言的这门手艺，就叫<em>自然语言处理（NLP）</em>。</p>
+
+  <p>2017 年，关键发明登场：<em>Transformer</em> 架构。它有个"注意力"机制——读一个词时，能同时看到整句话的所有词，前后对照。之前的模型像金鱼，读到句尾就忘了句首；Transformer 能一目十行。</p>
+
+  <p>再往后，故事简单粗暴：<strong>更大的网络 + 更多的数据 + 更多的算力 = 更强的能力</strong>。GPT 系列一路堆上去，堆到 2022 年底 ChatGPT 出圈——大家突然发现：这台只会"猜下一个词"的机器，聊起天来居然像个人。</p>
+
+  <div class="diagram-wrap">
+    <canvas id="canvas-nlp" width="680" height="168"></canvas>
+    <p class="caption">NLP 的进化链：每一代都在回答同一个问题——怎么让机器更懂人话</p>
+  </div>
+
+  <div class="callout">
+    <p><strong>堆规模就能变强？</strong>这个规律业内叫 <em>Scaling Law</em>，俗称"大力出奇迹"：同一个简单的任务，规模大到一定程度，能力会突然上台阶。没人完全搞懂为什么，但它确实管用。</p>
+  </div>
+</section>
+
+<!-- ==================== 5. 训练三部曲 ==================== -->
+<section>
+  <h2><span class="num">5</span> LLM 出厂记：训练三部曲</h2>
+
+  <p>正文说过 LLM 是接龙机。但这台接龙机出厂前，得经过三道工序：</p>
+
+  <div class="diagram-wrap">
+    <canvas id="canvas-train" width="680" height="210"></canvas>
+    <p class="caption">先博览群书，再学做人，最后上岗接龙</p>
+  </div>
+
+  <ul>
+    <li><strong>① 预训练：博览群书。</strong>把互联网上能搞到的文字——书籍、网页、百科、代码——全喂给它，只练一件事：猜下一个词。几万亿个词刷下来，它为了猜得准，被迫学会了语法、常识、逻辑。毕竟要猜对"水往低处__"，你多少得懂点物理。</li>
+    <li><strong>② 对齐微调：学做人。</strong>刚练成的模型是个"野生学霸"，会接龙但不一定会聊天。于是用人工挑选的"好回答"继续调教，再让人类给它的回答打分，教它什么话有用、什么话不能说。这一步叫<em>对齐</em>。</li>
+    <li><strong>③ 推理：上岗干活。</strong>你用的时候，它不再学习，只是不停地接龙——就是正文里那个循环。</li>
+  </ul>
+
+  <div class="callout blue">
+    <p><strong>它在偷偷学我吗？</strong>没有。你聊天时它的参数早就冻结了，只是在用训练时学到的本事现场接龙。它"记得"你说的话，靠的是正文里那招——每次把聊天记录全发一遍。</p>
+  </div>
+</section>
+
+<!-- ==================== 6. 多模态 ==================== -->
+<section>
+  <h2><span class="num">6</span> 多模态：给 LLM 配上眼睛和耳朵</h2>
+
+  <p>LLM 只认 token——一串数字。那它怎么看图、听声音？答案很直白：<strong>请翻译官</strong>。</p>
+
+  <p>图片：切成一个个小方块，每块经一个"视觉编码器"翻译成数字。声音：同理，把音频切成小段，翻译成数字序列。翻译完之后，在 LLM 眼里，这些数字和文字 token 没本质区别——<strong>都是"可以一起接龙的素材"</strong>。</p>
+
+  <div class="diagram-wrap">
+    <canvas id="canvas-mm" width="680" height="270"></canvas>
+    <p class="caption">不管图片、声音还是文字，统统翻译成数字，再交给 LLM 处理</p>
+  </div>
+
+  <p>反过来也行：LLM 输出特定的数字，再让另一个模型翻译回图片、声音——AI 画画、AI 配音就是这么来的。</p>
+
+  <div class="callout">
+    <p><strong>打个比方：</strong>就像联合国开会，各国代表说自己的语言，同传统一翻译成工作语言。LLM 只需要懂一种"数字语"，剩下的交给翻译官。所以"多模态大模型"听着唬人，拆开就是：<strong>LLM + 一群翻译官</strong>。</p>
+  </div>
+</section>
+
+<!-- ==================== 总结 ==================== -->
+<section>
+  <h2><span class="num">∞</span> 总结</h2>
+
+  <p>回顾一下这条进化链，每一环都朴素得很：</p>
+
+  <div class="formula-box">
+    <p>从例子里找规律 → 层层加工的神经网络 → 堆到超大规模</p>
+    <p class="big">机器学习 + 深度学习 + 大力出奇迹 = LLM</p>
+  </div>
+
+  <p>而 LLM 从头到尾干的活，还是机器学习最朴素的那件事——<strong>猜下一个</strong>。</p>
+
+  <p style="text-align:center;margin-top:16px;">祛魅完毕 2.0。下次有人把 AI 吹得神乎其神，你可以淡定一笑：<strong>"不就是台会刷题的接龙机嘛。"</strong></p>
+</section>
+
+<div class="end-mark">· · ·</div>
+
+<footer><a href="index.html">← 返回《什么是 Agent？》</a></footer>
+
+</div>
+
+<script>
+/* ── 读取当前主题色，使图表自动适配亮/暗色 ── */
+function getColors() {
+  var s = getComputedStyle(document.documentElement);
+  function v(n) { return (s.getPropertyValue(n) || '').trim(); }
+  return {
+    primary: v('--primary'), primaryLight: v('--primary-light'),
+    accent: v('--accent'),   accentLight: v('--accent-light'),
+    green: v('--green'),     greenLight: v('--green-light'),
+    purple: v('--purple'),   purpleLight: v('--purple-light'),
+    text: v('--text'), muted: v('--text-muted'), light: v('--text-light'),
+    surface: v('--surface'), border: v('--border'),
+    amberFill: '#fef3c7', amberBorder: '#f59e0b', amberText: '#92400e'
+  };
+}
+
+var __redraws = [];
+
+/* ── 画布初始化：等比缩放，窄屏不变形 ── */
+function setupCanvas(id, drawFn) {
+  var canvas = document.getElementById(id);
+  if (!canvas) return;
+  var dpr = window.devicePixelRatio || 1;
+  var baseW = canvas.width, baseH = canvas.height; // 设计空间尺寸
+
+  function resize() {
+    var rect = canvas.parentElement.getBoundingClientRect();
+    var w = Math.min(rect.width - 32, baseW);
+    var h = baseH * (w / baseW);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+    var s = w / baseW; // 等比缩放因子
+    ctx.save();
+    ctx.scale(s, s);
+    drawFn(ctx, baseW, baseH);
+    ctx.restore();
+  }
+
+  __redraws.push(resize);
+  resize();
+  window.addEventListener('resize', resize);
+}
+
+/* ── 基础绘图工具 ── */
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color, width) {
+  color = color || '#64748b';
+  width = width || 2;
+  var angle = Math.atan2(y2 - y1, x2 - x1);
+  var headLen = 11;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2 - headLen * 0.85 * Math.cos(angle), y2 - headLen * 0.85 * Math.sin(angle));
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle - 0.4), y2 - headLen * Math.sin(angle - 0.4));
+  ctx.lineTo(x2 - headLen * Math.cos(angle + 0.4), y2 - headLen * Math.sin(angle + 0.4));
+  ctx.closePath();
+  ctx.fill();
+}
+
+/* 支持多行文本的方框 */
+function drawBox(ctx, x, y, w, h, text, fill, border, textColor, fontSize) {
+  fontSize = fontSize || 14;
+  roundRect(ctx, x, y, w, h, 9);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = border;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = textColor;
+  ctx.font = '600 ' + fontSize + 'px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  var lines = String(text).split('\n');
+  var lh = fontSize * 1.25;
+  var startY = y + h / 2 - (lines.length - 1) * lh / 2;
+  for (var i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], x + w / 2, startY + i * lh);
+  }
+}
+
+/* 支持多行 + 对齐的标签 */
+function drawLabel(ctx, x, y, text, color, size, align) {
+  color = color || '#64748b';
+  size = size || 13;
+  align = align || 'center';
+  ctx.fillStyle = color;
+  ctx.font = '500 ' + size + 'px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.textAlign = align;
+  ctx.textBaseline = 'middle';
+  var lines = String(text).split('\n');
+  var lh = size * 1.3;
+  var startY = y - (lines.length - 1) * lh / 2;
+  for (var i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], x, startY + i * lh);
+  }
+}
+
+/* ─── 图 1: 机器学习 = 喂例子 + 转旋钮 ─── */
+function drawML(ctx, w, h) {
+  var c = getColors();
+
+  drawLabel(ctx, 114, 26, '① 喂例子（带答案）', c.muted, 12);
+  drawLabel(ctx, 340, 26, '② 训练', c.muted, 12);
+  drawLabel(ctx, 566, 26, '③ 考新题', c.muted, 12);
+
+  var ex = ['📧 中奖啦！！ → 垃圾', '📧 会议纪要 → 正常', '📧 免费领 → 垃圾'];
+  for (var i = 0; i < 3; i++) {
+    drawBox(ctx, 28, 48 + i * 48, 172, 40, ex[i], c.surface, c.border, c.text, 12);
+  }
+
+  drawBox(ctx, 258, 66, 164, 108, '机器学习\n（狂转旋钮找规律）', c.primaryLight, c.primary, c.primary, 14);
+
+  /* 旋钮示意 */
+  var knobX = [300, 340, 380], knobY = 150, ang = [-0.8, 0.5, 1.9];
+  for (i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.arc(knobX[i], knobY, 8, 0, Math.PI * 2);
+    ctx.fillStyle = c.surface;
+    ctx.fill();
+    ctx.strokeStyle = c.primary;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(knobX[i], knobY);
+    ctx.lineTo(knobX[i] + 7 * Math.cos(ang[i]), knobY + 7 * Math.sin(ang[i]));
+    ctx.stroke();
+  }
+
+  drawBox(ctx, 480, 48, 172, 44, '📧 恭喜中奖，点击领取', c.surface, c.border, c.text, 12);
+  drawArrow(ctx, 566, 94, 566, 138, c.muted, 1.8);
+
+  ctx.save();
+  ctx.setLineDash([5, 4]);
+  roundRect(ctx, 480, 140, 172, 44, 9);
+  ctx.fillStyle = c.greenLight;
+  ctx.fill();
+  ctx.strokeStyle = c.green;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+  drawLabel(ctx, 566, 162, '判定：垃圾邮件 ✋', c.green, 13);
+
+  drawArrow(ctx, 202, 116, 256, 116, c.muted, 1.8);
+  drawArrow(ctx, 424, 116, 478, 70, c.muted, 1.8);
+}
+
+/* ─── 图 2: 预测 vs 分类 ─── */
+function drawTask(ctx, w, h) {
+  var c = getColors();
+  var pW = 280, pH = 180, pY = 20;
+
+  /* 左面板：预测 */
+  var lx = 30;
+  roundRect(ctx, lx, pY, pW, pH, 12);
+  ctx.fillStyle = c.surface;
+  ctx.fill();
+  ctx.strokeStyle = c.border;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  drawLabel(ctx, lx + pW / 2, pY + 26, '预测：猜一个数', c.primary, 15);
+
+  drawArrow(ctx, 76, 172, 286, 172, c.muted, 1.5);
+  drawArrow(ctx, 76, 172, 76, 64, c.muted, 1.5);
+  drawLabel(ctx, 76, 52, '价格', c.muted, 11);
+  drawLabel(ctx, 262, 188, '面积', c.muted, 11);
+
+  ctx.strokeStyle = c.accent;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(88, 162);
+  ctx.lineTo(262, 78);
+  ctx.stroke();
+
+  var pts = [[100, 156], [128, 142], [152, 140], [182, 118], [214, 100], [248, 84]];
+  for (var i = 0; i < pts.length; i++) {
+    ctx.beginPath();
+    ctx.arc(pts[i][0], pts[i][1], 4, 0, Math.PI * 2);
+    ctx.fillStyle = c.primary;
+    ctx.fill();
+  }
+
+  /* 右面板：分类 */
+  var rx = 370;
+  roundRect(ctx, rx, pY, pW, pH, 12);
+  ctx.fillStyle = c.surface;
+  ctx.fill();
+  ctx.strokeStyle = c.border;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  drawLabel(ctx, rx + pW / 2, pY + 26, '分类：分一个类', c.green, 15);
+
+  ctx.save();
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = c.light;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(392, 172);
+  ctx.lineTo(632, 80);
+  ctx.stroke();
+  ctx.restore();
+
+  var cats = [[430, 92], [450, 108], [468, 88], [452, 124], [434, 114], [474, 112]];
+  var dogs = [[548, 148], [568, 162], [588, 152], [562, 178], [592, 172], [578, 138]];
+  for (i = 0; i < cats.length; i++) {
+    ctx.beginPath();
+    ctx.arc(cats[i][0], cats[i][1], 4, 0, Math.PI * 2);
+    ctx.fillStyle = c.primary;
+    ctx.fill();
+  }
+  for (i = 0; i < dogs.length; i++) {
+    ctx.beginPath();
+    ctx.arc(dogs[i][0], dogs[i][1], 4, 0, Math.PI * 2);
+    ctx.fillStyle = c.accent;
+    ctx.fill();
+  }
+  drawLabel(ctx, 452, 66, '🐱 猫', c.primary, 12);
+  drawLabel(ctx, 572, 192, '🐶 狗', c.accent, 12);
+
+  drawLabel(ctx, lx + pW / 2, 226, '→ 输出一个数', c.primary, 13);
+  drawLabel(ctx, rx + pW / 2, 226, '→ 输出一个类别', c.green, 13);
+}
+
+/* ─── 图 3: 神经网络分层结构 ─── */
+function drawNN(ctx, w, h) {
+  var c = getColors();
+  var r = 13;
+  var cols = [
+    { x: 80,  ys: [106, 150, 194], fill: c.primaryLight, stroke: c.primary },
+    { x: 260, ys: [62, 106, 150, 194, 238], fill: c.purpleLight, stroke: c.purple },
+    { x: 440, ys: [62, 106, 150, 194, 238], fill: c.purpleLight, stroke: c.purple },
+    { x: 620, ys: [128, 172], fill: c.greenLight, stroke: c.green }
+  ];
+
+  /* 连线 */
+  ctx.strokeStyle = c.border;
+  ctx.lineWidth = 1;
+  for (var i = 0; i < cols.length - 1; i++) {
+    for (var a = 0; a < cols[i].ys.length; a++) {
+      for (var b = 0; b < cols[i + 1].ys.length; b++) {
+        ctx.beginPath();
+        ctx.moveTo(cols[i].x + r, cols[i].ys[a]);
+        ctx.lineTo(cols[i + 1].x - r, cols[i + 1].ys[b]);
+        ctx.stroke();
+      }
+    }
+  }
+
+  /* 节点 */
+  for (i = 0; i < cols.length; i++) {
+    for (a = 0; a < cols[i].ys.length; a++) {
+      ctx.beginPath();
+      ctx.arc(cols[i].x, cols[i].ys[a], r, 0, Math.PI * 2);
+      ctx.fillStyle = cols[i].fill;
+      ctx.fill();
+      ctx.strokeStyle = cols[i].stroke;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+
+  drawLabel(ctx, 80, 266, '输入', c.muted, 12);
+  drawLabel(ctx, 260, 266, '加工层', c.muted, 12);
+  drawLabel(ctx, 440, 266, '加工层', c.muted, 12);
+  drawLabel(ctx, 620, 266, '输出', c.muted, 12);
+  drawLabel(ctx, 80, 284, '（原始数据）', c.light, 11);
+  drawLabel(ctx, 620, 284, '（判断结果）', c.light, 11);
+}
+
+/* ─── 图 4: NLP 演进时间线 ─── */
+function drawNLP(ctx, w, h) {
+  var c = getColors();
+  var y = 100;
+
+  ctx.strokeStyle = c.muted;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(46, y);
+  ctx.lineTo(634, y);
+  ctx.stroke();
+
+  var nodes = [
+    { x: 70,  t: '规则时代',    d: '人编语法词典' },
+    { x: 205, t: '统计方法',    d: '数词频，算概率' },
+    { x: 340, t: '词向量',      d: '词变成数字' },
+    { x: 475, t: 'Transformer', d: '2017 · 注意力机制' },
+    { x: 610, t: 'LLM 时代',    d: '2022 · ChatGPT 出圈' }
+  ];
+
+  for (var i = 0; i < nodes.length; i++) {
+    var n = nodes[i];
+    var last = i === nodes.length - 1;
+
+    ctx.beginPath();
+    ctx.arc(n.x, y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = last ? c.accent : c.primary;
+    ctx.fill();
+
+    ctx.fillStyle = last ? c.accent : c.text;
+    ctx.font = '700 13px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(n.t, n.x, 66);
+
+    drawLabel(ctx, n.x, 136, n.d, c.muted, 11);
+  }
+}
+
+/* ─── 图 5: LLM 训练三部曲 ─── */
+function drawTrain(ctx, w, h) {
+  var c = getColors();
+  var bW = 172, bH = 112, bY = 48;
+
+  drawBox(ctx, 30, bY, bW, bH, '① 预训练\n📚 博览群书\n只练一件事：猜下一个词', c.primaryLight, c.primary, c.primary, 13);
+  drawBox(ctx, 254, bY, bW, bH, '② 对齐微调\n🎓 学做人\n人类打分，教它好好说话', c.purpleLight, c.purple, c.purple, 13);
+  drawBox(ctx, 478, bY, bW, bH, '③ 推理上岗\n💬 接龙干活\n参数冻结，不再学习', c.greenLight, c.green, c.green, 13);
+
+  drawArrow(ctx, 204, bY + bH / 2, 252, bY + bH / 2, c.muted, 2);
+  drawArrow(ctx, 428, bY + bH / 2, 476, bY + bH / 2, c.muted, 2);
+}
+
+/* ─── 图 6: 多模态 = LLM + 翻译官 ─── */
+function drawMM(ctx, w, h) {
+  var c = getColors();
+
+  var inputs = ['🖼️ 图片', '🔊 声音', '📝 文字'];
+  var iy = [36, 106, 176];
+  for (var i = 0; i < 3; i++) {
+    drawBox(ctx, 28, iy[i], 112, 44, inputs[i], c.surface, c.border, c.text, 14);
+  }
+
+  drawBox(ctx, 232, 82, 140, 92, '编码器\n（翻译官）', c.purpleLight, c.purple, c.purple, 15);
+
+  for (i = 0; i < 4; i++) {
+    roundRect(ctx, 424 + i * 28, 117, 22, 22, 5);
+    ctx.fillStyle = c.primaryLight;
+    ctx.fill();
+    ctx.strokeStyle = c.primary;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  drawLabel(ctx, 477, 158, '统一数字语言', c.muted, 11);
+
+  drawBox(ctx, 560, 88, 92, 80, 'LLM', c.amberFill, c.amberBorder, c.amberText, 15);
+
+  drawArrow(ctx, 142, 58, 230, 108, c.muted, 1.8);
+  drawArrow(ctx, 142, 128, 230, 128, c.muted, 1.8);
+  drawArrow(ctx, 142, 198, 230, 148, c.muted, 1.8);
+  drawArrow(ctx, 374, 128, 420, 128, c.muted, 1.8);
+  drawArrow(ctx, 534, 128, 558, 128, c.muted, 1.8);
+
+  drawLabel(ctx, w / 2, 244, '反过来也行：LLM 输出数字 → 翻译官 → 图片 / 声音', c.muted, 12);
+}
+
+/* ── 初始化 ── */
+document.addEventListener('DOMContentLoaded', function () {
+  setupCanvas('canvas-ml', drawML);
+  setupCanvas('canvas-task', drawTask);
+  setupCanvas('canvas-nn', drawNN);
+  setupCanvas('canvas-nlp', drawNLP);
+  setupCanvas('canvas-train', drawTrain);
+  setupCanvas('canvas-mm', drawMM);
+
+  var html = document.documentElement;
+
+  document.querySelectorAll('.theme-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var theme = this.getAttribute('data-theme');
+      html.setAttribute('data-theme', theme);
+      localStorage.setItem('wia-theme', theme);
+      __redraws.forEach(function (fn) { fn(); }); // 切换主题时重绘图表
+    });
+  });
+});
+</script>
+
+</body>
+</html>
