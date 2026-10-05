@@ -200,6 +200,31 @@ em {
   margin-top: 10px;
 }
 
+/* ── 图表动画控制条 ── */
+.anim-bar {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.anim-btn {
+  font-family: inherit;
+  font-size: 0.78em;
+  padding: 4px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1.6;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+.anim-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 canvas {
   display: block;
   max-width: 100%;
@@ -386,8 +411,13 @@ footer {
   <p>但它的运作方式跟你想象的可能不太一样。LLM 本质上是一台<strong>超级接龙机</strong>——你给它一段话，它预测下一个最可能出现的"词"是什么，接上去；然后把新句子再喂给自己，预测再下一个词……就这么一个字一个字往外蹦，直到它觉得"说完了"。</p>
 
   <div class="diagram-wrap">
-    <canvas id="canvas-llm" width="680" height="280"></canvas>
-    <p class="caption">每次只预测下一个词，输出后又接回输入——循环往复，就连成了一整段话</p>
+    <canvas id="canvas-llm" width="680" height="320"></canvas>
+    <div class="anim-bar">
+      <button type="button" class="anim-btn" id="llm-play">⏸ 暂停</button>
+      <button type="button" class="anim-btn" id="llm-step">下一步 ▸</button>
+      <button type="button" class="anim-btn" id="llm-reset">↺ 重播</button>
+    </div>
+    <p class="caption">每一轮，LLM 都要把「你的输入 + 已经生成的内容」整段重新读一遍，然后只吐出 1 个 token</p>
   </div>
 
   <p>这里说的"词"，在 AI 圈有专门的名字——<strong>token（词元）</strong>。一个 token 可能是完整词语，也可能是单字，甚至可能是词语的一小段（比如"苹果"可能拆成"苹"和"果"）。总之，它是 LLM 输入输出的最小单位。</p>
@@ -558,9 +588,22 @@ var __redraws = [];
 /* ── 画布初始化：等比缩放，窄屏不变形 ── */
 function setupCanvas(id, drawFn) {
   var canvas = document.getElementById(id);
-  if (!canvas) return;
+  if (!canvas) return null;
   var dpr = window.devicePixelRatio || 1;
   var baseW = canvas.width, baseH = canvas.height; // 设计空间尺寸
+  var ctx = canvas.getContext('2d');
+  var cssW = baseW, cssH = baseH, scale = 1;
+
+  /* 只重绘（尺寸不变时用，供动画逐帧调用） */
+  function paint() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, cssW, cssH);
+    ctx.save();
+    ctx.scale(scale, scale);
+    drawFn(ctx, baseW, baseH);
+    ctx.restore();
+  }
 
   function resize() {
     var rect = canvas.parentElement.getBoundingClientRect();
@@ -570,20 +613,14 @@ function setupCanvas(id, drawFn) {
     canvas.style.height = h + 'px';
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
-    var ctx = canvas.getContext('2d');
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, w, h);
-    var s = w / baseW; // 等比缩放因子
-    ctx.save();
-    ctx.scale(s, s);
-    drawFn(ctx, baseW, baseH);
-    ctx.restore();
+    cssW = w; cssH = h; scale = w / baseW; // 等比缩放因子
+    paint();
   }
 
   __redraws.push(resize);
   resize();
   window.addEventListener('resize', resize);
+  return { paint: paint, resize: resize, canvas: canvas };
 }
 
 /* ── 基础绘图工具 ── */
@@ -661,77 +698,271 @@ function drawLabel(ctx, x, y, text, color, size, align) {
   }
 }
 
-/* ─── 图 1: LLM 接龙原理 ─── */
+/* ─── 图 1: LLM 接龙原理（动画） ─── */
+/* 演示要点：每一轮都把「输入 + 已生成」整段重新读一遍，只预测并吐出下一个 token */
+var LLM_IN = ['你', '好', '吗'];            // 用户的输入
+var LLM_OUT = ['我', '很', '好', '！'];      // 逐个生成出来的 token
+/* 每轮的候选 token 与概率（排第一的就是被选中的那个） */
+var LLM_CAND = [
+  [['我', 0.68], ['你', 0.14], ['不', 0.07]],
+  [['很', 0.61], ['还', 0.18], ['不', 0.09]],
+  [['好', 0.77], ['棒', 0.11], ['累', 0.04]],
+  [['！', 0.52], ['。', 0.33], ['～', 0.07]]
+];
+/* 四个阶段的时长：读输入 → 打分 → 吐出一个 → 停顿 */
+var LLM_PHASE_MS = [1000, 1600, 800, 1500];
+var llmAnim = { step: 0, phase: 0, t: 0, playing: true };
+
+function easeOut(x) { return 1 - Math.pow(1 - x, 3); }
+function easeInOut(x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+function clamp01(x) { return x < 0 ? 0 : (x > 1 ? 1 : x); }
+
+/* 以 (cx, cy) 为中心画一个可缩放的 token 方块 */
+function drawToken(ctx, cx, cy, bw, bh, text, fill, border, textColor, fontSize, scale, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha == null ? 1 : alpha;
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  ctx.translate(-cx, -cy);
+  drawBox(ctx, cx - bw / 2, cy - bh / 2, bw, bh, text, fill, border, textColor, fontSize);
+  ctx.restore();
+}
+
+/* 一个候选 token：小方块 + 概率条 */
+function drawCand(ctx, x, y, ch, p, pMax, hot, alpha, c) {
+  var FONT = '-apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  var bw = 30, bh = 26;
+  roundRect(ctx, x, y - bh / 2, bw, bh, 6);
+  ctx.fillStyle = hot ? c.amberFill : c.surface;
+  ctx.fill();
+  ctx.strokeStyle = hot ? c.accent : c.border;
+  ctx.lineWidth = hot ? 2 : 1.2;
+  ctx.stroke();
+  ctx.fillStyle = hot ? c.accent : c.text;
+  ctx.font = '600 14px ' + FONT;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(ch, x + bw / 2, y);
+
+  var bx = x + bw + 8, bWidth = 56, bHeight = 8;
+  roundRect(ctx, bx, y - bHeight / 2, bWidth, bHeight, 4);
+  ctx.fillStyle = c.border;
+  ctx.fill();
+  var vw = bWidth * (p / pMax);
+  if (vw > 2) {
+    roundRect(ctx, bx, y - bHeight / 2, vw, bHeight, 4);
+    ctx.fillStyle = hot ? c.accent : c.light;
+    ctx.fill();
+  }
+  ctx.fillStyle = hot ? c.accent : c.muted;
+  ctx.font = '500 11px ' + FONT;
+  ctx.textAlign = 'left';
+  ctx.fillText(Math.round(p * 100) + '%', bx + bWidth + 6, y);
+  ctx.restore();
+  return x + bw / 2; // 方块中心 x，供"飞出去"的动画用
+}
+
 function drawLLM(ctx, w, h) {
   var c = getColors();
-  var cx = w / 2;
+  var a = llmAnim;
+  var step = a.step, phase = a.phase, raw = a.t;
+  var t = easeOut(raw);
 
-  var boxW = 58, boxH = 40, gap = 12;
-  var inTokens = ['你', '好', '吗'];
-  var totalIn = inTokens.length * boxW + (inTokens.length - 1) * gap;
-  var yInput = 42;
-  var startX = cx - totalIn / 2;
-  for (var i = 0; i < inTokens.length; i++) {
-    drawBox(ctx, startX + i * (boxW + gap), yInput, boxW, boxH, inTokens[i],
-      c.primaryLight, c.primary, c.primary, 16);
+  var toks = LLM_IN.concat(LLM_OUT);
+  var nSlot = toks.length;                       // 7
+  var boxW = 54, boxH = 42, gap = 10;
+  var rowW = nSlot * boxW + (nSlot - 1) * gap;
+  var x0 = (w - rowW) / 2;
+  var tokY = 44, tokCY = tokY + boxH / 2;
+  function slotX(i) { return x0 + i * (boxW + gap); }
+  function slotCX(i) { return slotX(i) + boxW / 2; }
+
+  /* 当前已经"落地"的 token 数；emit 阶段结束时 +1 */
+  var placed = LLM_IN.length + step + (phase >= 3 ? 1 : 0);
+  var pendIdx = LLM_IN.length + step;            // 本轮要填的空位
+
+  var barX = 90, barY = 176, barW = 500, barH = 88;
+  var bracketY = tokY + boxH + 18;               // 104
+  var candY = barY + 66;
+
+  /* ── 图例 ── */
+  var lgY = 20, lgX = w / 2 - 92;
+  roundRect(ctx, lgX, lgY - 7, 14, 14, 3);
+  ctx.fillStyle = c.primaryLight; ctx.fill();
+  ctx.strokeStyle = c.primary; ctx.lineWidth = 1.5; ctx.stroke();
+  drawLabel(ctx, lgX + 20, lgY, '你的输入', c.muted, 12, 'left');
+  roundRect(ctx, lgX + 104, lgY - 7, 14, 14, 3);
+  ctx.fillStyle = c.greenLight; ctx.fill();
+  ctx.strokeStyle = c.green; ctx.lineWidth = 1.5; ctx.stroke();
+  drawLabel(ctx, lgX + 124, lgY, 'LLM 生成的', c.muted, 12, 'left');
+
+  /* ── token 行 ── */
+  for (var i = 0; i < placed; i++) {
+    var isGen = i >= LLM_IN.length;
+    var fill = isGen ? c.greenLight : c.primaryLight;
+    var line = isGen ? c.green : c.primary;
+    var ink = isGen ? c.green : c.primary;
+    var alpha = 1, scale = 1;
+
+    if (phase === 0) {
+      // 逐个"被读"：没读到的淡一点，正在读的描橙色
+      var rp = clamp01(raw * placed - i);
+      alpha = 0.4 + 0.6 * rp;
+      if (rp > 0.02 && rp < 0.98) { line = c.accent; ink = c.accent; }
+    }
+    if (phase === 3 && i === placed - 1) {
+      // 刚接上去的新 token：弹一下
+      scale = 1 + 0.28 * (1 - easeOut(clamp01(raw * 3)));
+    }
+    drawToken(ctx, slotCX(i), tokCY, boxW, boxH, toks[i], fill, line, ink, 16, scale, alpha);
   }
 
-  var llmW = 128, llmH = 42, llmY = yInput + boxH + 34;
-  drawArrow(ctx, cx, yInput + boxH + 2, cx, llmY - 2, c.muted, 2);
-  drawBox(ctx, cx - llmW / 2, llmY, llmW, llmH, 'LLM 接龙',
-    c.amberFill, c.amberBorder, c.amberText, 15);
-
-  var outW = 312, outH = 56, outY = llmY + llmH + 30;
-  drawArrow(ctx, cx, llmY + llmH + 2, cx, outY - 2, c.muted, 2);
-
-  ctx.save();
-  ctx.setLineDash([5, 4]);
-  ctx.strokeStyle = c.light;
-  ctx.lineWidth = 1.5;
-  roundRect(ctx, cx - outW / 2, outY, outW, outH, 10);
-  ctx.stroke();
-  ctx.restore();
-  drawLabel(ctx, cx, outY - 12, '逐个生成 token…', c.muted, 12);
-
-  var genTokens = ['我', '很', '好'];
-  var gW = 58, gH = 36, gGap = 12;
-  var gStartX = cx - outW / 2 + 18;
-  var gY = outY + (outH - gH) / 2;
-  for (i = 0; i < genTokens.length; i++) {
+  /* 待填的空位 */
+  if (phase === 1 || phase === 2) {
+    var qAlpha = phase === 2 ? 1 - easeInOut(raw) : 1;   // token 飞近时问号淡出
     ctx.save();
-    ctx.globalAlpha = 0.4 + i * 0.3;
-    drawBox(ctx, gStartX + i * (gW + gGap), gY, gW, gH, genTokens[i],
-      c.greenLight, c.green, c.green, 15);
+    ctx.globalAlpha = qAlpha;
+    ctx.setLineDash([5, 4]);
+    ctx.strokeStyle = c.light;
+    ctx.lineWidth = 1.5;
+    roundRect(ctx, slotX(pendIdx), tokY, boxW, boxH, 9);
+    ctx.stroke();
+    drawLabel(ctx, slotCX(pendIdx), tokCY, '?', c.light, 18);
     ctx.restore();
   }
-  var dotsX = gStartX + genTokens.length * (gW + gGap) + 6;
-  drawLabel(ctx, dotsX, outY + outH / 2, '···', c.muted, 18);
 
-  // 循环：输出 → 输入
-  var loopX = cx + outW / 2 + 26;
-  var inRight = startX + totalIn;
-  var inMidY = yInput + boxH / 2;
+  /* ── 输入括号：罩住当前整段内容（吐字阶段先淡出，让路给飞出去的 token） ── */
+  var fadeOut = phase === 2 ? 1 - clamp01(raw * 2.5) : 1;
+  var readN = placed * (phase === 0 ? clamp01(raw) : 1);   // 括号展开进度
+  var bLeft = slotX(0);
+  var bRight = x0 + readN * (boxW + gap) - gap;
+  if (bRight > bLeft + 10 && fadeOut > 0.02) {
+    ctx.save();
+    ctx.globalAlpha = (phase === 3 ? 0.9 : 1) * fadeOut;
+    ctx.strokeStyle = phase === 3 ? c.green : c.accent;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(bLeft, bracketY - 6);
+    ctx.lineTo(bLeft, bracketY);
+    ctx.lineTo(bRight, bracketY);
+    ctx.lineTo(bRight, bracketY - 6);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ── 整段送进 LLM 的箭头 ── */
+  var arrX = x0 + (placed * (boxW + gap) - gap) / 2;
+  var arrAlpha = (phase === 0 ? clamp01((raw - 0.65) / 0.35) : (phase === 3 ? 0.3 : 1)) * fadeOut;
+  if (arrAlpha > 0.02) {
+    ctx.save();
+    ctx.globalAlpha = arrAlpha;
+    drawArrow(ctx, arrX, bracketY + 4, arrX, barY - 3, c.accent, 2);
+    drawLabel(ctx, arrX - 12, (bracketY + barY) / 2, '整段送进去', c.accent, 12, 'right');
+    ctx.restore();
+  }
+
+  /* ── LLM 主体 ── */
+  var glow = phase === 1 ? 10 + 8 * Math.sin(raw * Math.PI * 3) : (phase === 2 ? 8 : 0);
   ctx.save();
-  ctx.setLineDash([6, 4]);
-  ctx.strokeStyle = c.primary;
-  ctx.lineWidth = 2;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(cx + outW / 2, outY + outH / 2);
-  ctx.lineTo(loopX, outY + outH / 2);
-  ctx.lineTo(loopX, inMidY);
-  ctx.lineTo(inRight + 12, inMidY);
-  ctx.stroke();
-  ctx.restore();
-  ctx.fillStyle = c.primary;
-  ctx.beginPath();
-  ctx.moveTo(inRight, inMidY);
-  ctx.lineTo(inRight + 11, inMidY - 5);
-  ctx.lineTo(inRight + 11, inMidY + 5);
-  ctx.closePath();
+  if (glow > 0) { ctx.shadowColor = c.amberBorder; ctx.shadowBlur = glow; }
+  roundRect(ctx, barX, barY, barW, barH, 12);
+  ctx.fillStyle = c.amberFill;
   ctx.fill();
-  drawLabel(ctx, loopX + 12, (outY + outH / 2 + inMidY) / 2, '循环：输出 → 输入', c.primary, 12, 'left');
+  ctx.restore();
+  ctx.strokeStyle = c.amberBorder;
+  ctx.lineWidth = 2;
+  roundRect(ctx, barX, barY, barW, barH, 12);
+  ctx.stroke();
+  var barTextAlpha = phase === 2 ? clamp01(1 - raw * 4) : 1;  // 吐字时让路，文字淡出
+  ctx.save();
+  ctx.globalAlpha = barTextAlpha;
+  drawLabel(ctx, barX + 22, barY + 21, '🤖 LLM 接龙机', c.amberText, 15, 'left');
+  drawLabel(ctx, barX + 22, barY + 43, '把上面整段重新读一遍，给词表里每个候选 token 打分', c.amberText, 12, 'left');
+  ctx.restore();
+
+  /* ── 候选 token（打分阶段） ── */
+  var cands = LLM_CAND[step];
+  var hotCx = barX + 22 + 15;
+  if (phase === 1 || phase === 2) {
+    var cAlpha = phase === 1 ? clamp01(raw * 4) : clamp01(1 - raw * 2.2);
+    var hot = phase === 2 || raw > 0.72;
+    var pMax = cands[0][1];
+    for (var j = 0; j < cands.length; j++) {
+      var grow = phase === 1 ? clamp01(raw * 2 - j * 0.18) : 1;
+      var cxj = drawCand(ctx, barX + 22 + j * 140, candY, cands[j][0],
+        cands[j][1] * grow, pMax, hot && j === 0, cAlpha, c);
+      if (j === 0) hotCx = cxj;
+    }
+  }
+
+  /* ── 只吐出一个 token：从候选飞进空位 ── */
+  var upAlpha = phase === 1 ? clamp01((raw - 0.75) / 0.25) * 0.6 : (phase === 2 ? 1 : 0);
+  if (upAlpha > 0.02) {
+    ctx.save();
+    ctx.globalAlpha = upAlpha;
+    if (phase === 1) ctx.setLineDash([5, 4]);
+    drawArrow(ctx, slotCX(pendIdx), barY - 3, slotCX(pendIdx), tokY + boxH + 4, c.green, 2);
+    ctx.restore();
+  }
+  if (phase === 2) {
+    var e = easeInOut(clamp01((raw - 0.12) / 0.88));
+    var fx = hotCx + (slotCX(pendIdx) - hotCx) * e;
+    var fy = candY + (tokCY - candY) * e;
+    drawToken(ctx, fx, fy, boxW, boxH, LLM_OUT[step],
+      c.greenLight, c.green, c.green, 16, 0.85 + 0.15 * e, 1);
+  }
+
+  /* ── 底部解说 ── */
+  var seq = toks.slice(0, placed).join('');
+  var msg;
+  if (phase === 0) msg = '第 ' + (step + 1) + ' 轮：把已有的「' + seq + '」整段读一遍（不是只读最后那个字）';
+  else if (phase === 1) msg = '第 ' + (step + 1) + ' 轮：读完打分，挑出最可能的下一个 token';
+  else if (phase === 2) msg = '第 ' + (step + 1) + ' 轮：只吐出 1 个 token ——「' + LLM_OUT[step] + '」，接到末尾';
+  else if (step < LLM_OUT.length - 1) msg = '现在整段变成了「' + seq + '」——它又成了下一轮的输入，接着来';
+  else msg = '模型觉得“说完了”，停下——一整句话就是这么一个字一个字蹦出来的';
+  drawLabel(ctx, w / 2, h - 20, msg, c.text, 13);
+}
+
+/* ── 图 1 动画驱动 ── */
+var llmPaint = null, llmLast = 0, llmRunning = false, llmVisible = true;
+
+function llmTick(dt) {
+  var a = llmAnim;
+  var dur = LLM_PHASE_MS[a.phase];
+  if (a.phase === 3 && a.step === LLM_OUT.length - 1) dur *= 1.8; // 结尾多看一会儿
+  a.t += dt / dur;
+  while (a.t >= 1) {
+    a.t -= 1;
+    a.phase++;
+    if (a.phase > 3) {
+      a.phase = 0;
+      a.step = (a.step + 1) % LLM_OUT.length;
+    }
+  }
+}
+
+function llmLoop(ts) {
+  llmRunning = true;
+  if (!llmPaint || !llmAnim.playing || !llmVisible) { llmRunning = false; return; }
+  var dt = llmLast ? Math.min(ts - llmLast, 80) : 16;
+  llmLast = ts;
+  llmTick(dt);
+  llmPaint();
+  requestAnimationFrame(llmLoop);
+}
+
+function llmStart() {
+  if (!llmRunning) { llmLast = 0; requestAnimationFrame(llmLoop); }
+}
+
+/* 手动"下一步"：先看本轮打分结果→落地，再跳到下一轮的打分 */
+function llmStepOnce() {
+  var a = llmAnim;
+  if (a.phase < 3) { a.phase = 3; a.t = 0; }
+  else { a.step = (a.step + 1) % LLM_OUT.length; a.phase = 1; a.t = 0.99; }
 }
 
 /* ─── 图 2: 工具调用（中介为枢纽） ─── */
@@ -829,9 +1060,50 @@ function drawAgent(ctx, w, h) {
 
 /* ── 初始化 ── */
 document.addEventListener('DOMContentLoaded', function () {
-  setupCanvas('canvas-llm', drawLLM);
+  var llm = setupCanvas('canvas-llm', drawLLM);
   setupCanvas('canvas-tool', drawTool);
   setupCanvas('canvas-agent', drawAgent);
+
+  /* ── 图 1 动画：自动播放 + 手动控制 ── */
+  if (llm) {
+    llmPaint = llm.paint;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      llmAnim.playing = false;      // 尊重系统"减少动态效果"设置，改为手动播放
+      llmAnim.phase = 1; llmAnim.t = 0.99;  // 静态时也要展示一个信息完整的画面
+    }
+
+    var btnPlay = document.getElementById('llm-play');
+    function syncPlay() { btnPlay.textContent = llmAnim.playing ? '⏸ 暂停' : '▶ 播放'; }
+    syncPlay();
+
+    btnPlay.addEventListener('click', function () {
+      llmAnim.playing = !llmAnim.playing;
+      syncPlay();
+      if (llmAnim.playing) llmStart(); else llmPaint();
+    });
+    document.getElementById('llm-step').addEventListener('click', function () {
+      llmAnim.playing = false;
+      syncPlay();
+      llmStepOnce();
+      llmPaint();
+    });
+    document.getElementById('llm-reset').addEventListener('click', function () {
+      llmAnim.step = 0; llmAnim.phase = 0; llmAnim.t = 0;
+      llmAnim.playing = true;
+      syncPlay();
+      llmStart();
+    });
+
+    /* 滚出屏幕就暂停动画，省点电 */
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        llmVisible = entries[0].isIntersecting;
+        if (llmVisible && llmAnim.playing) llmStart();
+      }, { threshold: 0.15 }).observe(llm.canvas);
+    }
+
+    llmStart();
+  }
 
   var html = document.documentElement;
 
